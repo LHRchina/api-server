@@ -1,0 +1,8 @@
+{
+  "postgresql_server":{
+    "host":"127.0.0.1",
+    "port": "5432",
+    "user":"lihaoran",
+    "db_name":"lihaoran"
+  }
+}
