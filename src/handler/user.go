@@ -25,8 +25,6 @@ type PutState struct {
 
 //init the return msg
 func init() {
-	fmt.Println("init")
-
 	commonRespMsg = map[string]string{
 		"method_error": `{"code":200,"msg":"request method error %s"}`,
 		"params_error": `{"code":200,"msg":"request method error %s"}`,
