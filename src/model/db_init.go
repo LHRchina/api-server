@@ -15,11 +15,15 @@ func init() {
 
 func getDbConnect() *pg.DB {
 	db := util.GetDb()
-	return pg.Connect(&pg.Options{
+	op := pg.Options{
 		Addr:               db.Host + ":" + db.Port,
 		User:               db.User,
 		Database:           db.DbName,
 		PoolSize:           1000,
 		IdleCheckFrequency: time.Second * 4,
-	})
+	}
+	if db.Password != "" {
+		op.Password = db.Password
+	}
+	return pg.Connect(&op)
 }

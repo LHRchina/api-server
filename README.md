@@ -30,11 +30,18 @@ vendor/                 # third party package directory
 
 ```
 
-3.Start the server :
+
+3.use postgresql client to connect pg server then execute the bin/install.sql content
+
+4.configurate your pg server ip, port, username and password.
+
+4.Start the server :
 * clone the project to your [GOPATH](https://github.com/golang/go/wiki/GOPATH "Title") (asumme you have install golang envirment)
 * execute : bin/start.sh(your local machine 8080 port is avaliable to use)
-* use tool to quest the server    
+* use tool to request the server    
 
 
+TODO 
+* circuit breaker
 
 
