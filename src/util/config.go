@@ -43,5 +43,5 @@ func GetDb() *Db {
 }
 
 func GetRedis() *Db {
-	
+	return &conf.RedisDb
 }
