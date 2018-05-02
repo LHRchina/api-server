@@ -45,41 +45,28 @@ func GetRelationshipsById(id int64) (relationships []Relationship, err error) {
 }
 
 func UpdateRelationships(uid, oid int64, state string) (relationship Relationship, err error) {
-
 	dbState := RelationStrToCode[state]
+	//开启事务
+	var tx *pg.Tx
+	tx, err = dbObj.db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
 
-	var key string
-	if uid > oid {
-		key = getConcurrentKey(uid, oid)
-	} else {
-		key = getConcurrentKey(oid, uid)
-	}
-
-	dbObj.getConnect()
-	conn := getRedisConn()
-	defer (*conn).Close()
-
-	ret, err := (*conn).Do("INCR", key)
 	if err != nil {
-		util.Err("model.UpdateRelationships  reids err:", err)
+		util.Err("model.UpdateRelationships begin fail:", err)
 		return relationship, err
-	}
-	_, err = (*conn).Do("EXPIRE", key, DURATION)
-	if err != nil {
-		util.Err("model.UpdateRelationships  set reids  key expire err :", err)
-		return relationship, errors.New("set expire fail")
-	}
-	val := ret.(int64)
-	if val != 1 {
-		util.Err("model.UpdateRelationships  reids  lock :")
-		return relationship, errors.New("lock concurrent")
 	}
 
 	//查询是否存在关系
 	util.Info("model.UpdateRelationships uid oid relation update :", uid, oid)
-	err = dbObj.db.Model(&relationship).Where("uid = ? and oid = ?", uid, oid).Select()
+	err = tx.Model(&relationship).Where("uid = ? and oid = ? for update", uid, oid).Select()
 	if err != nil && err != pg.ErrNoRows {
-		util.Err("select error:", err)
+		util.Err("model.UpdateRelationships select fail:", err)
 		return relationship, err
 	}
 	//relation 不存在 插入或者更新
@@ -95,7 +82,7 @@ func UpdateRelationships(uid, oid int64, state string) (relationship Relationshi
 		relationship.Oid = oid
 		relationship.Type = "relationship"
 		relationship.Status = dbState
-		err = dbObj.db.Insert(&relationship)
+		err = tx.Insert(&relationship)
 		if err != nil {
 			util.Err("model.UpdateRelationships insert err:", err)
 			return relationship, err
@@ -112,14 +99,14 @@ func UpdateRelationships(uid, oid int64, state string) (relationship Relationshi
 		//更新数据库为match
 		orelation.Status = MATCHED
 		relationship.Status = MATCHED
-		ret, err := dbObj.db.Model(&relationship).Where("id = ?", relationship.Id).Update()
+		ret, err := tx.Model(&relationship).Where("id = ?", relationship.Id).Update()
 		if err != nil {
 			util.Err("model.UpdateRelationships update match fail relationship:", relationship, err)
 			return relationship, err
 		}
 		util.Info("model.UpdateRelationships update match relationship:", relationship, "ret:", ret)
 
-		ret, err = dbObj.db.Model(&orelation).Where("id = ?", orelation.Id).Update()
+		ret, err = tx.Model(&orelation).Where("id = ?", orelation.Id).Update()
 		if err != nil {
 			util.Err("model.UpdateRelationships update match fail orelation:", orelation, err)
 			return relationship, err
@@ -129,15 +116,11 @@ func UpdateRelationships(uid, oid int64, state string) (relationship Relationshi
 	//之前是匹配的，后来disliked了，match状态改为liked
 	if relationship.Status == RelationStrToCode[DISLIKED] && orelation.Status == RelationStrToCode[MATCHED] {
 		orelation.Status = LIKED
-		_, err = dbObj.db.Model(&orelation).Where("id = ?", orelation.Id).Update()
+		_, err = tx.Model(&orelation).Where("id = ?", orelation.Id).Update()
 		if err != nil {
 			util.Err("model.UpdateRelationships update match fail orelation:", orelation, err)
 			return relationship, err
 		}
-	}
-	_, err = (*conn).Do("DEL", key)
-	if err != nil {
-		util.Warn("model.UpdateRelationships del key:", key, "err:", err)
 	}
 
 	return relationship, nil
