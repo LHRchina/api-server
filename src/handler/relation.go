@@ -2,13 +2,13 @@ package handler
 
 import (
 	"api-server/src/model"
+	"api-server/src/util"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"api-server/src/util"
 )
 
 //get all relation of request user
@@ -35,7 +35,12 @@ func GetUserRelationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ret := model.GetRelationshipsById(int64(uid))
+	ret, err := model.GetRelationshipsById(int64(uid))
+	if err != nil {
+		util.Warn("GetUserRelationHandler model.GetRelationshipsById uid:", uid, "err:", err)
+		fmt.Fprintf(w, string(dummySlice))
+		return
+	}
 	retJson, err := json.Marshal(ret)
 	if err != nil {
 		fmt.Fprintf(w, string(dummySlice))
@@ -53,18 +58,18 @@ func UpdateUserRelationHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	rawData, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		util.Info("handler.UpdateUserRelationHandler ioutil.ReadAll err:",err)
+		util.Info("handler.UpdateUserRelationHandler ioutil.ReadAll err:", err)
 		fmt.Fprintf(w, string(dummyObj))
 		return
 	}
 
 	//log the raw header and body info
-	util.Info("body :", rawData, "header:", r.Header)
+	util.Info("body :", string(rawData), "header:", r.Header)
 
 	var state PutState
 	err = json.Unmarshal(rawData, &state)
 	if err != nil {
-		util.Info("handler.UpdateUserRelationHandler json.Unmarshal err:",err)
+		util.Info("handler.UpdateUserRelationHandler json.Unmarshal err:", err)
 		fmt.Fprintf(w, string(dummyObj))
 		return
 	}
@@ -89,7 +94,7 @@ func UpdateUserRelationHandler(w http.ResponseWriter, r *http.Request) {
 	oid, _ := strconv.Atoi(oidStr)
 	ret, err := model.UpdateRelationships(int64(uid), int64(oid), state.State)
 	if err != nil {
-		util.Warn("handler.UpdateUserRelationHandler model fail:",err)
+		util.Warn("handler.UpdateUserRelationHandler model fail:", err)
 		fmt.Fprintf(w, string(dummyObj))
 		return
 	}

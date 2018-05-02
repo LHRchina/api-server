@@ -5,5 +5,12 @@
     "user":"lihaoran",
     "db_name":"lihaoran",
     "password":""
+  },
+  "redis":{
+    "host":"127.0.0.1",
+    "port": "6379",
+    "user":"",
+    "db_name":"",
+    "password":""
   }
 }

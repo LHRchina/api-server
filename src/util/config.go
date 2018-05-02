@@ -17,6 +17,7 @@ type (
 
 	Config struct {
 		Pgdb Db `json:"postgresql_server"`
+		RedisDb Db `json:"redis"`
 	}
 )
 
@@ -39,4 +40,8 @@ func init() {
 
 func GetDb() *Db {
 	return &conf.Pgdb
+}
+
+func GetRedis() *Db {
+	
 }
