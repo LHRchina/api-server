@@ -5,6 +5,7 @@ import (
 	"github.com/go-pg/pg"
 	redis2 "github.com/gomodule/redigo/redis"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -33,7 +34,7 @@ func init() {
 				}
 			}
 			if redisDb.DbName != "" {
-				if _, err := c.Do("SELECT", 0); err != nil {
+				if _, err := c.Do("SELECT", redisDb.DbName); err != nil {
 					c.Close()
 					return nil, err
 				}
@@ -50,21 +51,23 @@ func getRedisConn() *redis2.Conn {
 }
 
 func (d *DbObj) getConnect() {
-
+	var once sync.Once
 	if d.db != nil {
 		return
 	}
 
-	dbConf := util.GetDb()
-	op := pg.Options{
-		Addr:               dbConf.Host + ":" + dbConf.Port,
-		User:               dbConf.User,
-		Database:           dbConf.DbName,
-		PoolSize:           1000,
-		IdleCheckFrequency: time.Second * 4,
-	}
-	if dbConf.Password != "" {
-		op.Password = dbConf.Password
-	}
-	d.db = pg.Connect(&op)
+	once.Do(func() {
+		dbConf := util.GetDb()
+		op := pg.Options{
+			Addr:               dbConf.Host + ":" + dbConf.Port,
+			User:               dbConf.User,
+			Database:           dbConf.DbName,
+			PoolSize:           1000,
+			IdleCheckFrequency: time.Second * 4,
+		}
+		if dbConf.Password != "" {
+			op.Password = dbConf.Password
+		}
+		d.db = pg.Connect(&op)
+	})
 }

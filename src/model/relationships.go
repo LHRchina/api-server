@@ -2,7 +2,6 @@ package model
 
 import (
 	"api-server/src/util"
-	"errors"
 	"fmt"
 	"github.com/go-pg/pg"
 )
@@ -45,35 +44,7 @@ func GetRelationshipsById(id int64) (relationships []Relationship, err error) {
 }
 
 func UpdateRelationships(uid, oid int64, state string) (relationship Relationship, err error) {
-
 	dbState := RelationStrToCode[state]
-
-	var key string
-	if uid > oid {
-		key = getConcurrentKey(uid, oid)
-	} else {
-		key = getConcurrentKey(oid, uid)
-	}
-
-	dbObj.getConnect()
-	conn := getRedisConn()
-	defer (*conn).Close()
-
-	ret, err := (*conn).Do("INCR", key)
-	if err != nil {
-		util.Err("model.UpdateRelationships  reids err:", err)
-		return relationship, err
-	}
-	_, err = (*conn).Do("EXPIRE", key, DURATION)
-	if err != nil {
-		util.Err("model.UpdateRelationships  set reids  key expire err :", err)
-		return relationship, errors.New("set expire fail")
-	}
-	val := ret.(int64)
-	if val != 1 {
-		util.Err("model.UpdateRelationships  reids  lock :")
-		return relationship, errors.New("lock concurrent")
-	}
 
 	//查询是否存在关系
 	util.Info("model.UpdateRelationships uid oid relation update :", uid, oid)
@@ -134,10 +105,6 @@ func UpdateRelationships(uid, oid int64, state string) (relationship Relationshi
 			util.Err("model.UpdateRelationships update match fail orelation:", orelation, err)
 			return relationship, err
 		}
-	}
-	_, err = (*conn).Do("DEL", key)
-	if err != nil {
-		util.Warn("model.UpdateRelationships del key:", key, "err:", err)
 	}
 
 	return relationship, nil
