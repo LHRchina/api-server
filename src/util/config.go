@@ -8,15 +8,15 @@ import (
 
 type (
 	Db struct {
-		Host   string `json:"host"`
-		Port   string `json:"port"`
-		User   string `json:"user"`
-		DbName string `json:"db_name"`
+		Host     string `json:"host"`
+		Port     string `json:"port"`
+		User     string `json:"user"`
+		DbName   string `json:"db_name"`
 		Password string `json:"password"`
 	}
 
 	Config struct {
-		Pgdb Db `json:"postgresql_server"`
+		Pgdb    Db `json:"postgresql_server"`
 		RedisDb Db `json:"redis"`
 	}
 )
