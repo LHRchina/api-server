@@ -30,9 +30,9 @@ func getConcurrentKey(uid, oid int64) string {
 }
 
 func GetRelationshipsById(id int64) (relationships []Relationship, err error) {
-	dbObj.getConnect()
+	db := dbObj.getConnect()
 	//TODO the sample is limit to 100
-	err = dbObj.db.Model(&relationships).Where("uid = ?", id).Limit(100).Select()
+	err = db.Model(&relationships).Where("uid = ?", id).Limit(100).Select()
 	if err != nil {
 		util.Err("GetRelationshipsById db.Model:", err)
 		return relationships, err
@@ -45,10 +45,10 @@ func GetRelationshipsById(id int64) (relationships []Relationship, err error) {
 
 func UpdateRelationships(uid, oid int64, state string) (relationship Relationship, err error) {
 	dbState := RelationStrToCode[state]
-	dbObj.getConnect()
+	db := dbObj.getConnect()
 	//开启事务
 	var tx *pg.Tx = new(pg.Tx)
-	tx, err = dbObj.db.Begin()
+	tx, err = db.Begin()
 	defer func() {
 		if err != nil {
 			tx.Rollback()

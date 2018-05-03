@@ -18,11 +18,7 @@ func init() {
 
 }
 
-func (d *DbObj) getConnect() {
-	if d.db != nil {
-		return
-	}
-
+func (d *DbObj) getConnect() *pg.DB {
 	once.Do(func() {
 		dbConf := util.GetDb()
 		op := pg.Options{
@@ -37,4 +33,5 @@ func (d *DbObj) getConnect() {
 		}
 		d.db = pg.Connect(&op)
 	})
+	return d.db
 }
