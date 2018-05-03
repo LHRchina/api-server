@@ -3,8 +3,6 @@ package model
 import (
 	"api-server/src/util"
 	"github.com/go-pg/pg"
-	redis2 "github.com/gomodule/redigo/redis"
-	"os"
 	"sync"
 	"time"
 )
@@ -14,44 +12,13 @@ type DbObj struct {
 }
 
 var dbObj DbObj
-var pool *redis2.Pool
+var once sync.Once
 
 func init() {
-	redisDb := util.GetRedis()
-	pool = &redis2.Pool{
-		// Other pool configuration not shown in this example.
-		Dial: func() (redis2.Conn, error) {
-			add := redisDb.Host + ":" + redisDb.Port
-			c, err := redis2.Dial("tcp", add)
-			if err != nil {
-				util.Err("init redis err:", err)
-				os.Exit(-1)
-			}
-			if redisDb.Password != "" {
-				if _, err := c.Do("AUTH", redisDb.Password); err != nil {
-					c.Close()
-					return nil, err
-				}
-			}
-			if redisDb.DbName != "" {
-				if _, err := c.Do("SELECT", redisDb.DbName); err != nil {
-					c.Close()
-					return nil, err
-				}
-			}
-			return c, nil
-		},
-		MaxActive: 100,
-	}
-}
 
-func getRedisConn() *redis2.Conn {
-	conn := pool.Get()
-	return &conn
 }
 
 func (d *DbObj) getConnect() {
-	var once sync.Once
 	if d.db != nil {
 		return
 	}

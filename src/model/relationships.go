@@ -45,20 +45,37 @@ func GetRelationshipsById(id int64) (relationships []Relationship, err error) {
 
 func UpdateRelationships(uid, oid int64, state string) (relationship Relationship, err error) {
 	dbState := RelationStrToCode[state]
-
+	dbObj.getConnect()
+	//开启事务
+	var tx *pg.Tx = new(pg.Tx)
+	tx, err = dbObj.db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+	if err != nil {
+		util.Err("model.UpdateRelationships begin fail:", err)
+		return relationship, err
+	}
 	//查询是否存在关系
-	util.Info("model.UpdateRelationships uid oid relation update :", uid, oid)
-	err = dbObj.db.Model(&relationship).Where("uid = ? and oid = ?", uid, oid).Select()
+	util.Info("model.UpdateRelationships uid:", uid, " oid:", oid, " relation update ")
+	_, err = tx.Query(&relationship, "select id,uid,oid,status,type from Relationships where uid = ? and oid = ? for update", uid, oid)
 	if err != nil && err != pg.ErrNoRows {
-		util.Err("select error:", err)
+		util.Err("model.UpdateRelationships select err:", err)
 		return relationship, err
 	}
 	//relation 不存在 插入或者更新
-	if err != nil && err == pg.ErrNoRows {
+	if relationship.Id == 0 {
+		relationship.Uid = uid
+		relationship.Oid = oid
+		relationship.Type = "relationship"
 		relationship.Status = dbState
-		err = dbObj.db.Update(&relationship)
+		err := tx.Insert(&relationship)
 		if err != nil {
-			util.Err("model.UpdateRelationships Update err:", err)
+			util.Err("model.UpdateRelationships Insert err:", err)
 			return relationship, err
 		}
 	} else {
@@ -66,31 +83,31 @@ func UpdateRelationships(uid, oid int64, state string) (relationship Relationshi
 		relationship.Oid = oid
 		relationship.Type = "relationship"
 		relationship.Status = dbState
-		err = dbObj.db.Insert(&relationship)
+		err = tx.Update(&relationship)
 		if err != nil {
-			util.Err("model.UpdateRelationships insert err:", err)
+			util.Err("model.UpdateRelationships Update err:", err)
 			return relationship, err
 		}
 	}
 	var orelation Relationship
-	err = dbObj.db.Model(&orelation).Where("uid = ? and oid = ?", oid, uid).Select()
-	if err != nil {
+	_, err = tx.Query(&orelation, "select  id,uid,oid,status,type from Relationships where uid = ? and oid = ? for update", oid, uid)
+	if err != nil && err != pg.ErrNoRows {
 		util.Err("model.UpdateRelationships select oid err:", err)
 		return relationship, err
 	}
 
-	if orelation.Status == relationship.Status && orelation.Status == RelationStrToCode[LIKED] {
+	if orelation.Status == relationship.Status && orelation.Status == RelationStrToCode[LIKE_STR] {
 		//更新数据库为match
 		orelation.Status = MATCHED
 		relationship.Status = MATCHED
-		ret, err := dbObj.db.Model(&relationship).Where("id = ?", relationship.Id).Update()
+		ret, err := tx.Model(&relationship).Where("id = ?", relationship.Id).Update()
 		if err != nil {
 			util.Err("model.UpdateRelationships update match fail relationship:", relationship, err)
 			return relationship, err
 		}
 		util.Info("model.UpdateRelationships update match relationship:", relationship, "ret:", ret)
 
-		ret, err = dbObj.db.Model(&orelation).Where("id = ?", orelation.Id).Update()
+		ret, err = tx.Model(&orelation).Where("id = ?", orelation.Id).Update()
 		if err != nil {
 			util.Err("model.UpdateRelationships update match fail orelation:", orelation, err)
 			return relationship, err
@@ -98,9 +115,9 @@ func UpdateRelationships(uid, oid int64, state string) (relationship Relationshi
 		util.Info("model.UpdateRelationships update match relationship:", orelation, "ret:", ret)
 	}
 	//之前是匹配的，后来disliked了，match状态改为liked
-	if relationship.Status == RelationStrToCode[DISLIKED] && orelation.Status == RelationStrToCode[MATCHED] {
+	if relationship.Status == RelationStrToCode[DISLIKE_STR] && orelation.Status == RelationStrToCode[MATCHED_STR] {
 		orelation.Status = LIKED
-		_, err = dbObj.db.Model(&orelation).Where("id = ?", orelation.Id).Update()
+		_, err = tx.Model(&orelation).Where("id = ?", orelation.Id).Update()
 		if err != nil {
 			util.Err("model.UpdateRelationships update match fail orelation:", orelation, err)
 			return relationship, err
