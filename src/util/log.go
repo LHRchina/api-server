@@ -11,7 +11,7 @@ var (
 )
 
 func initLog(l *logrus.Logger, path string, level logrus.Level) {
-	out, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0666)
+	out, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
 	if err != nil {
 		fmt.Println("open "+path+" err:", err)
 		os.Exit(-1)
@@ -32,7 +32,7 @@ func Info(v ...interface{}) {
 }
 
 func Err(v ...interface{}) {
-	errLog.Println(v)
+	errLog.Error(v)
 }
 
 func Warn(v ...interface{}) {
