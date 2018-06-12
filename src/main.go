@@ -9,7 +9,6 @@ import (
 )
 
 func main() {
-
 	r := mux.NewRouter()
 	r.HandleFunc("/users", handler.GetAllUsersHandler).Methods("GET")
 	r.HandleFunc("/users", handler.CreateUserHandler).Methods("POST")
